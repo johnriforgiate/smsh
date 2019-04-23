@@ -2,9 +2,68 @@
 
 import sys
 
-def main():
-    print("Hello World")
-    # my code here
+
+def help_menu():
+    print("\nsmsh, a CLI for sending SMS messages over an SSH interface with your phone")
+    print("\nBelow you will find a list of options to use when running this tool:")
+    print("-s or --send   ->  Send SMS text message")
+    print("-r or --read   ->  Read last most recent texts up to a specified number")
+    print("-b or --backup ->  Backup last however many texts onto your computer")
+    print("-v or --view   ->  View backup texts organized by threads")
+    print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
+    print("-h or --help   ->  Displays this list of possible commands")
+
+
+def send():
+    print("Sending not yet implemented")
+    exit(1)
+
+
+def read():
+    print("Reading from a file not yet implemented")
+    exit(1)
+
+
+def backup():
+    print("Backing up texts not yet implemented")
+    exit(1)
+
+
+def view():
+    print("Viewing backups not yet implemented")
+    exit(1)
+
+
+def out():
+    print("Writing to a text file not yet implemented")
+    exit(1)
+
+
+def main(argv):
+
+    # In the case of no arguments passed in ask users to read the help guide
+    if len(argv) == 0:
+        print('No arguments included, run "smsh -h" for a list of options')
+        exit(1)
+    if argv[0] == "-s" or argv[0] == "--send":
+        send()
+        exit(0)
+    if argv[0] == "-r" or argv[0] == "--read":
+        read()
+        exit(0)
+    if argv[0] == "-b" or argv[0] == "--backup":
+        backup()
+        exit(0)
+    if argv[0] == "-v" or argv[0] == "--view":
+        view()
+        exit(0)
+    if argv[0] == "-o" or argv[0] == "--out":
+        out()
+        exit(0)
+    if argv[0] == "-h" or argv[0] == "--help":
+        help_menu()
+        exit(0)
+
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
