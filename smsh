@@ -4,6 +4,7 @@ import sys
 import paramiko
 import datetime
 import json
+import os
 import warnings
 
 # Remove cryptography warning that results from paramiko implementation
@@ -93,16 +94,28 @@ def send(argv):
 
 
 def read():
+    # Create the directory to store recent message data.
+    now = datetime.datetime.now()
+    path = os.getcwd() + "/last100/" # + now.strftime("%Y-%m-%d_%H-%M") + ".json"
+    try:
+        os.mkdir(path)
+    except OSError:
+        pass # Directory already exists.
+    else:
+        print("Successfully created the directory %s " % path)
+    path = path + now.strftime("%Y-%m-%d_%H-%M") + "_last100.json"
+
+    # Send the command to view the last 100 messages.
     ssh_init()
     ssh_command("termux-sms-list -l 100 > unread.json", "Checking for unread messages...")
     print("Retrieving backup from phone.")
-    retrieve_file("/data/data/com.termux/files/home/unread.json", "/home/johnriforgiate/unread.json")
+    retrieve_file("/data/data/com.termux/files/home/unread.json", path)
     ssh_command("rm unread.json", "Removing temporary json file from phone.")
 
     # Close the SSH session
     ssh_close()
     unread_messages = 0
-    with open('/home/johnriforgiate/unread.json') as json_file:
+    with open(path) as json_file:
         data = json.load(json_file)
         for p in data:
             if p["read"] == False:
@@ -126,9 +139,7 @@ def backup():
     ssh_init()
     ssh_command("termux-sms-list -l 999999999 -t all > smsLog.json", status_string)
 
-    # Set a unique file name so that the databases won't be overwritten and users can have multiple backups.
-    now = datetime.datetime.now()
-    file_string = "/home/johnriforgiate/" + now.strftime("%Y-%m-%d_%H-%M") + "_SMS_backup.json"
+    file_string = os.getcwd() + "/SMS_backup.json"
 
     # Retrieve the file from the phone.
     print("Retrieving backup from phone.")
@@ -146,8 +157,38 @@ def view():
 
 
 def out():
-    print("Writing to a text file not yet implemented")
-    exit(1)
+    now = datetime.datetime.now()
+    path = os.getcwd() + "/" + "SMS_thread_out_" + now.strftime("%Y-%m-%d_%H-%M") + "/"
+
+    try:
+        os.mkdir(path)
+    except OSError:
+        # Directory already exists.
+        pass
+    else:
+        print("Successfully created the directory %s " % path)
+
+    with open(os.getcwd() + "/SMS_backup.json") as json_file:
+        data = json.load(json_file)
+        maxKey = max([i["threadid"] for i in data])
+
+        for x in range(maxKey):
+            f = open(path + str(x) + ".md", "w+")
+            for p in data:
+                if p["threadid"] == x:
+                    try:
+                        if p["type"] == "sent":
+                            f.write("- _Me_" + "  " + p["received"]+"\n")
+                        else:
+                            f.write("- _" + p["sender"] + "_   " + p["received"] + "\n")
+                        f.write("  - " + p["body"] + "\n\n")
+                    except:
+                        pass
+            f.close()
+            if os.stat(path + str(x) + ".md").st_size == 0:
+                if os.path.exists(path + str(x) + ".md"):
+                    os.remove(path + str(x) + ".md")
+    exit(0)
 
 
 def main(argv):
