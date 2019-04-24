@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+import paramiko
 
+ssh_client = paramiko.SSHClient()
 
 def help_menu():
     print("\nsmsh, a CLI for sending SMS messages over an SSH interface with your phone")
@@ -11,12 +13,46 @@ def help_menu():
     print("-b or --backup ->  Backup last however many texts onto your computer")
     print("-v or --view   ->  View backup texts organized by threads")
     print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
-    print("-h or --help   ->  Displays this list of possible commands")
+    print("-h or --help   ->  Displays this list of possible commands (this message)")
 
 
-def send():
-    print("Sending not yet implemented")
-    exit(1)
+def ssh_command(command_string):
+    try:
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname="10.132.18.192", username="u0_a72", port=8022, timeout=10)
+        stdin, stdout, stderr = ssh_client.exec_command(command_string)
+        ssh_client.close()
+        return stdin, stdout, stderr
+    except:
+        print("A communication error has occurred")
+        exit(1)
+
+
+def send(argv):
+    # Exit if there is not at least a phone number and a message.
+    if len(argv) < 2:
+        print("Not enough arguments, try running with phone number, then message. For example:")
+        print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
+        exit(1)
+    # Check that the first argument is a valid phone number.
+    if (not argv[0].isdigit()) or len(argv[0]) != 10:
+        print("Number is not formatted properly. Try inputting a 10 digit phone number numbers only. For example:")
+        print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
+        exit(1)
+    # Recreate the message string from the remaining arguments.
+    message_string = ' '.join(map(str, argv[1:]))
+    # command_string = "termux-sms-send -n " + argv[0] + " " + message_string
+    # Check to make sure the message is a valid length.
+    if len(message_string) > 160:
+        print("Message is more than 160 characters. Android can only send single messages up to 160 characters.")
+        print("Please try sending a shorter message.")
+        exit(1)
+    # Assemble the command string to send a message on the phone.
+    command_string = "termux-sms-send -n " + argv[0] + " " + message_string
+    # Send the actual command to the phone.
+    ssh_command(command_string)
+    print("Your message: \"" + message_string + "\" was sent successfully (probably).")
+    exit(0)
 
 
 def read():
@@ -46,7 +82,7 @@ def main(argv):
         print('No arguments included, run "smsh -h" for a list of options')
         exit(1)
     if argv[0] == "-s" or argv[0] == "--send":
-        send()
+        send(argv[1:])
         exit(0)
     if argv[0] == "-r" or argv[0] == "--read":
         read()
