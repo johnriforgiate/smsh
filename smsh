@@ -2,6 +2,11 @@
 
 import sys
 import paramiko
+import datetime
+import warnings
+
+# Remove cryptography warning that results from paramiko implementation
+warnings.filterwarnings(action='ignore', module='.*paramiko.*')
 
 ssh_client = paramiko.SSHClient()
 
@@ -15,17 +20,36 @@ def help_menu():
     print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
     print("-h or --help   ->  Displays this list of possible commands (this message)")
 
+# TODO: Implement without magic numbers and have a better error message for when connection did not succeed
+def ssh_init():
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect(hostname="10.132.182.131", username="u0_a72", port=8022, timeout=10)
 
-def ssh_command(command_string):
+
+def ssh_command(command_string, status_string):
     try:
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname="10.132.18.192", username="u0_a72", port=8022, timeout=10)
         stdin, stdout, stderr = ssh_client.exec_command(command_string)
-        ssh_client.close()
+        print(status_string)
+        exit_status = stdout.channel.recv_exit_status()  # Blocking call
+        if exit_status == 0:
+            print("Commmands successfully run")
+        else:
+            print("Error", exit_status)
         return stdin, stdout, stderr
     except:
         print("A communication error has occurred")
         exit(1)
+
+
+def ssh_close():
+    ssh_client.close()
+
+
+# Only works if ssh client is open
+def retrieve_file(remote_file_path, client_file_path):
+    ftp_client = ssh_client.open_sftp()
+    ftp_client.get(remote_file_path, client_file_path)
+    ftp_client.close()
 
 
 def send(argv):
@@ -34,23 +58,32 @@ def send(argv):
         print("Not enough arguments, try running with phone number, then message. For example:")
         print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
         exit(1)
+
     # Check that the first argument is a valid phone number.
+    # This may need to be changed to accomodate +1 and ()
     if (not argv[0].isdigit()) or len(argv[0]) != 10:
         print("Number is not formatted properly. Try inputting a 10 digit phone number numbers only. For example:")
         print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
         exit(1)
+
     # Recreate the message string from the remaining arguments.
     message_string = ' '.join(map(str, argv[1:]))
-    # command_string = "termux-sms-send -n " + argv[0] + " " + message_string
+
     # Check to make sure the message is a valid length.
     if len(message_string) > 160:
         print("Message is more than 160 characters. Android can only send single messages up to 160 characters.")
         print("Please try sending a shorter message.")
         exit(1)
+
     # Assemble the command string to send a message on the phone.
     command_string = "termux-sms-send -n " + argv[0] + " " + message_string
+
     # Send the actual command to the phone.
-    ssh_command(command_string)
+    ssh_init()
+    ssh_command(command_string, status_string="Sending a text message from your phone...")
+    ssh_close()
+
+    # Print a "reassuring" completion message.
     print("Your message: \"" + message_string + "\" was sent successfully (probably).")
     exit(0)
 
@@ -61,8 +94,27 @@ def read():
 
 
 def backup():
-    print("Backing up texts not yet implemented")
-    exit(1)
+    # Create a helpful status message warning users that this takes a bit
+    status_string = ("Backing up all text conversations on your phone."
+                     + "\nThis could take awhile, relax and get a cup of coffee. :)")
+
+    # Store all texts in a temporary backup file.
+    ssh_init()
+    ssh_command("termux-sms-list -l 999999999 -t all > smsLog.json", status_string)
+
+    # Set a unique file name so that the databases won't be overwritten and users can have multiple backups.
+    now = datetime.datetime.now()
+    file_string = "/home/johnriforgiate/" + now.strftime("%Y-%m-%d_%H-%M") + "_SMS_backup.json"
+
+    # Retrieve the file from the phone.
+    print("Retrieving backup from phone.")
+    retrieve_file("/data/data/com.termux/files/home/smsLog.json", file_string)
+    ssh_command("rm smsLog.json", "Removing temporary json file from phone.")
+
+    # Close the SSH session
+    ssh_close()
+    print("Texts backed up in json file located at: " + file_string)
+    exit(0)
 
 
 def view():
