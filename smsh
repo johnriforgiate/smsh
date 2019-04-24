@@ -3,12 +3,15 @@
 import sys
 import paramiko
 import datetime
+import json
 import warnings
 
 # Remove cryptography warning that results from paramiko implementation
 warnings.filterwarnings(action='ignore', module='.*paramiko.*')
 
+# Global variable storing the current ssh client
 ssh_client = paramiko.SSHClient()
+
 
 def help_menu():
     print("\nsmsh, a CLI for sending SMS messages over an SSH interface with your phone")
@@ -20,12 +23,14 @@ def help_menu():
     print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
     print("-h or --help   ->  Displays this list of possible commands (this message)")
 
+
 # TODO: Implement without magic numbers and have a better error message for when connection did not succeed
 def ssh_init():
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(hostname="10.132.182.131", username="u0_a72", port=8022, timeout=10)
+    ssh_client.connect(hostname="10.132.10.25", username="u0_a72", port=8022, timeout=10)
 
 
+# Takes in a command to send over ssh and a status to display to users as it is working.
 def ssh_command(command_string, status_string):
     try:
         stdin, stdout, stderr = ssh_client.exec_command(command_string)
@@ -85,12 +90,31 @@ def send(argv):
 
     # Print a "reassuring" completion message.
     print("Your message: \"" + message_string + "\" was sent successfully (probably).")
-    exit(0)
 
 
 def read():
-    print("Reading from a file not yet implemented")
-    exit(1)
+    ssh_init()
+    ssh_command("termux-sms-list -l 100 > unread.json", "Checking for unread messages...")
+    print("Retrieving backup from phone.")
+    retrieve_file("/data/data/com.termux/files/home/unread.json", "/home/johnriforgiate/unread.json")
+    ssh_command("rm unread.json", "Removing temporary json file from phone.")
+
+    # Close the SSH session
+    ssh_close()
+    unread_messages = 0
+    with open('/home/johnriforgiate/unread.json') as json_file:
+        data = json.load(json_file)
+        for p in data:
+            if p["read"] == False:
+                try:
+                    print("- _" + p["sender"] + "_   " + p["received"])
+                except:
+                    print("- _Me_   " + p["received"])
+                    pass
+                print("  - " + p["body"])
+                unread_messages = unread_messages + 1
+    print("You have " + str(unread_messages) + " unread messages.")
+    exit(0)
 
 
 def backup():
@@ -114,7 +138,6 @@ def backup():
     # Close the SSH session
     ssh_close()
     print("Texts backed up in json file located at: " + file_string)
-    exit(0)
 
 
 def view():
@@ -151,6 +174,9 @@ def main(argv):
     if argv[0] == "-h" or argv[0] == "--help":
         help_menu()
         exit(0)
+
+    print('Not a valid argument combination, run "smsh -h" for a list of options')
+    exit(1)
 
 
 if __name__ == "__main__":
