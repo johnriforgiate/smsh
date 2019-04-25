@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4828328a-37c5-480d-ad6f-de700bbbc7fd" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/smsh" beforeDir="false" afterPath="$PROJECT_DIR$/smsh" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -16,10 +15,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/smsh">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-68">
-              <caret line="26" column="30" selection-start-line="26" selection-start-column="30" selection-end-line="26" selection-end-column="30" />
+            <state relative-caret-position="134">
+              <caret line="160" column="46" selection-start-line="160" selection-start-column="46" selection-end-line="160" selection-end-column="46" />
               <folding>
-                <element signature="e#24#35#0" expanded="true" />
+                <element signature="e#24#34#0" expanded="true" />
+                <element signature="e#63#528#0" />
+                <element signature="e#4888#5650#0" />
               </folding>
             </state>
           </provider>
@@ -45,7 +46,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="y" value="27" />
     <option name="width" value="1280" />
     <option name="height" value="773" />
@@ -129,6 +130,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="27" width="1280" height="773" extended-state="7" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" weight="0.24578059" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -171,10 +173,12 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/smsh">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-68">
-          <caret line="26" column="30" selection-start-line="26" selection-start-column="30" selection-end-line="26" selection-end-column="30" />
+        <state relative-caret-position="134">
+          <caret line="160" column="46" selection-start-line="160" selection-start-column="46" selection-end-line="160" selection-end-column="46" />
           <folding>
-            <element signature="e#24#35#0" expanded="true" />
+            <element signature="e#24#34#0" expanded="true" />
+            <element signature="e#63#528#0" />
+            <element signature="e#4888#5650#0" />
           </folding>
         </state>
       </provider>
