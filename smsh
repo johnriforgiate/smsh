@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 import warnings
+import yaml
 
 # Remove cryptography warning that results from paramiko implementation
 warnings.filterwarnings(action='ignore', module='.*paramiko.*')
@@ -14,21 +15,41 @@ warnings.filterwarnings(action='ignore', module='.*paramiko.*')
 ssh_client = paramiko.SSHClient()
 
 
+def load_config():
+    try:
+        with open(".config", 'r') as config_file:
+            global config_dict
+            config_dict= yaml.safe_load(config_file)
+    except:
+        print(".config file not found or loaded incorrectly.")
+        print(" Try running with -c to write a config file and check that you are in the correct directory.")
+        print("  Format:  smsh -c IpAddress username portNumber timeout")
+        print("  Example: smsh -c 12.34.56.7 u0_a72 8022 10")
+        exit(1)
+
+
 def help_menu():
     print("\nsmsh, a CLI for sending SMS messages over an SSH interface with your phone")
     print("\nBelow you will find a list of options to use when running this tool:")
-    print("-s or --send   ->  Send SMS text message")
-    print("-r or --read   ->  Read last most recent texts up to a specified number")
+
+    print("-c or --config ->  Write a config file for the ssh connection.")
+    print("  Format:  smsh -c IpAddress username portNumber timeout")
+    print("  Example: smsh -c 12.34.56.7 u0_a72 8022 10")
+
+    print("-s or --send   ->  Send an SMS text message.")
+    print("  Format:  smsh -s PhoneNumber Message")
+    print("  Example: smsh -s 1234567890 Your Message")
+
+    print("-r or --read   ->  Read recent unread texts within your last 100 texts.")
     print("-b or --backup ->  Backup last however many texts onto your computer")
-    print("-v or --view   ->  View backup texts organized by threads")
     print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
     print("-h or --help   ->  Displays this list of possible commands (this message)")
 
 
-# TODO: Implement without magic numbers and have a better error message for when connection did not succeed
 def ssh_init():
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(hostname="10.132.10.25", username="u0_a72", port=8022, timeout=10)
+    ssh_client.connect(hostname=config_dict["ssh_params"]["hostname"], username=config_dict["ssh_params"]["username"],
+                       port=config_dict["ssh_params"]["port"], timeout=config_dict["ssh_params"]["timeout"])
 
 
 # Takes in a command to send over ssh and a status to display to users as it is working.
@@ -90,19 +111,19 @@ def send(argv):
     ssh_close()
 
     # Print a "reassuring" completion message.
-    print("Your message: \"" + message_string + "\" was sent successfully (probably).")
+    print("Your message: \"" + message_string + "\" was sent.")
 
 
 def read():
     # Create the directory to store recent message data.
     now = datetime.datetime.now()
-    path = os.getcwd() + "/last100/" # + now.strftime("%Y-%m-%d_%H-%M") + ".json"
+    path = os.getcwd() + "/SMS_last100/" # + now.strftime("%Y-%m-%d_%H-%M") + ".json"
     try:
         os.mkdir(path)
     except OSError:
         pass # Directory already exists.
     else:
-        print("Successfully created the directory %s " % path)
+        print("Successfully created the directory SMS_last100")
     path = path + now.strftime("%Y-%m-%d_%H-%M") + "_last100.json"
 
     # Send the command to view the last 100 messages.
@@ -126,7 +147,10 @@ def read():
                     pass
                 print("  - " + p["body"])
                 unread_messages = unread_messages + 1
-    print("You have " + str(unread_messages) + " unread messages.")
+    if unread_messages == 1:
+        print("You have 1 unread message.")
+    else:
+        print("You have " + str(unread_messages) + " unread messages.")
     exit(0)
 
 
@@ -151,10 +175,11 @@ def backup():
     print("Texts backed up in json file located at: " + file_string)
 
 
-def view():
-    print("Viewing backups not yet implemented")
-    exit(1)
-
+def config(argv):
+    # Write config file
+    f = open("./.config", "w+")
+    f.writelines(yaml.dump({"ssh_params": {"hostname": str(argv[0]), "username": str(argv[1]),
+                                           "port": str(argv[2]), "timeout": int(argv[3])}}))
 
 def out():
     now = datetime.datetime.now()
@@ -168,26 +193,29 @@ def out():
     else:
         print("Successfully created the directory %s " % path)
 
-    with open(os.getcwd() + "/SMS_backup.json") as json_file:
-        data = json.load(json_file)
-        maxKey = max([i["threadid"] for i in data])
+    try:
+        with open(os.getcwd() + "/SMS_backup.json") as json_file:
+            data = json.load(json_file)
+            maxKey = max([i["threadid"] for i in data])
 
-        for x in range(maxKey):
-            f = open(path + str(x) + ".md", "w+")
-            for p in data:
-                if p["threadid"] == x:
-                    try:
-                        if p["type"] == "sent":
-                            f.write("- _Me_" + "  " + p["received"]+"\n")
-                        else:
-                            f.write("- _" + p["sender"] + "_   " + p["received"] + "\n")
-                        f.write("  - " + p["body"] + "\n\n")
-                    except:
-                        pass
-            f.close()
-            if os.stat(path + str(x) + ".md").st_size == 0:
-                if os.path.exists(path + str(x) + ".md"):
-                    os.remove(path + str(x) + ".md")
+            for x in range(maxKey):
+                f = open(path + str(x) + ".md", "w+")
+                for p in data:
+                    if p["threadid"] == x:
+                        try:
+                            if p["type"] == "sent":
+                                f.write("- _Me_" + "  " + p["received"]+"\n")
+                            else:
+                                f.write("- _" + p["sender"] + "_   " + p["received"] + "\n")
+                            f.write("  - " + p["body"] + "\n\n")
+                        except:
+                            pass
+                f.close()
+                if os.stat(path + str(x) + ".md").st_size == 0:
+                    if os.path.exists(path + str(x) + ".md"):
+                        os.remove(path + str(x) + ".md")
+    except:
+        print("Backup file not found. Try running smsh -b first to create a backup file in this directory.")
     exit(0)
 
 
@@ -197,6 +225,18 @@ def main(argv):
     if len(argv) == 0:
         print('No arguments included, run "smsh -h" for a list of options')
         exit(1)
+    if argv[0] == "-c" or argv[0] == "--config":
+        config(argv[1:])
+        exit(0)
+    if argv[0] == "-o" or argv[0] == "--out":
+        out()
+        exit(0)
+    if argv[0] == "-h" or argv[0] == "--help":
+        help_menu()
+        exit(0)
+
+    load_config()
+
     if argv[0] == "-s" or argv[0] == "--send":
         send(argv[1:])
         exit(0)
@@ -205,15 +245,6 @@ def main(argv):
         exit(0)
     if argv[0] == "-b" or argv[0] == "--backup":
         backup()
-        exit(0)
-    if argv[0] == "-v" or argv[0] == "--view":
-        view()
-        exit(0)
-    if argv[0] == "-o" or argv[0] == "--out":
-        out()
-        exit(0)
-    if argv[0] == "-h" or argv[0] == "--help":
-        help_menu()
         exit(0)
 
     print('Not a valid argument combination, run "smsh -h" for a list of options')
