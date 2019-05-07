@@ -21,28 +21,28 @@ def load_config():
     except:
         print(".config file not found or loaded incorrectly.")
         print("Try running with -c to write a config file and check that you are in the correct directory.")
-        print("  Format:  smsh -c IpAddress username portNumber timeout")
-        print("  Example: smsh -c 12.34.56.7 u0_a72 8022 10")
+        print("  Format:  smssh.py -c IpAddress username portNumber timeout")
+        print("  Example: smssh.py -c 12.34.56.7 u0_a72 8022 10")
         exit(1)
 
 
 # Display a list of the possible commands a user could perform.
 def help_menu():
-    print("\nsmsh, a CLI for sending SMS messages over an SSH interface with your phone")
+    print("\nsmssh.py, a CLI for sending SMS messages over an SSH interface with your phone")
     print("\nBelow you will find a list of options to use when running this tool:")
 
     print("-c or --config ->  Write a config file for the ssh connection.")
-    print("  Format:  smsh -c IpAddress username portNumber timeout")
-    print("  Example: smsh -c 12.34.56.7 u0_a72 8022 10")
+    print("  Format:  smssh.py -c IpAddress username portNumber timeout")
+    print("  Example: smssh.py -c 12.34.56.7 u0_a72 8022 10")
 
     print("-s or --send   ->  Send an SMS text message.")
-    print("  Format:  smsh -s PhoneNumber Message")
-    print("  Example: smsh -s 1234567890 Your Message")
+    print("  Format:  smssh.py -s PhoneNumber Message")
+    print("  Example: smssh.py -s 1234567890 Your Message")
 
     print("-r or --read   ->  Read recent unread texts within your last 100 texts.")
-    print("-b or --backup ->  Backup last however many texts onto your computer")
-    print("-o or --out    ->  Output a readable text file of the messages in a thread using -o or --out")
-    print("-h or --help   ->  Displays this list of possible commands (this message)")
+    print("-b or --backup ->  Backup all texts onto your computer.")
+    print("-o or --out    ->  Output a markdown text file each thread in the backup file.")
+    print("-h or --help   ->  Displays this list of possible commands.")
 
     # Exit with success code
     exit(0)
@@ -103,14 +103,14 @@ def send(argv):
     # Exit if there is not at least a phone number and a message.
     if len(argv) < 2:
         print("Not enough arguments, try running with phone number, then message. For example:")
-        print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
+        print("smssh.py -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
         exit(1)
 
     # Check that the first argument is a valid phone number.
     # This may need to be changed to accomodate +1 and ()
     if (not argv[0].isdigit()) or len(argv[0]) != 10:
         print("Number is not formatted properly. Try inputting a 10 digit phone number numbers only. For example:")
-        print("smsh -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
+        print("smssh.py -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890")
         exit(1)
 
     # Recreate the message string from the remaining arguments.
@@ -281,7 +281,7 @@ def out():
                         os.remove(path + str(x) + ".md")
     except:
         # If the backup is not found, notify the user.
-        print("Backup file not found. Try running smsh -b first to create a backup file in this directory.")
+        print("Backup file not found. Try running smssh.py -b first to create a backup file in this directory.")
         exit(1)
     # Exit successfully if all went well.
     exit(0)
@@ -292,7 +292,7 @@ def main(argv):
 
     # In the case of no arguments passed in ask users to read the help guide
     if len(argv) == 0:
-        print('No arguments included, run "smsh -h" for a list of options')
+        print('No arguments included, run "smssh.py -h" for a list of options')
         exit(1)
 
     # Check for the arguments that don't need to connect to the server on the phone.
@@ -315,7 +315,7 @@ def main(argv):
         backup()
 
     # If no valid input is entered, ask the user to view the help guide.
-    print('Not a valid argument combination, run "smsh -h" for a list of options.')
+    print('Not a valid argument combination, run "smssh.py -h" for a list of options.')
     exit(1)
 
 
