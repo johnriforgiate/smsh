@@ -1,10 +1,11 @@
+import shutil
 from unittest import TestCase
 import unittest
 import smsh
 import sys
 import io
 import os
-
+import datetime
 
 class helpMenuUnit(TestCase):
     def setUp(self):
@@ -56,7 +57,6 @@ class loadConfigUnit(TestCase):
         )
         sys.stdout = old_std_out
 
-
     def test_config_existing(self):
         # Ensure there is a config file
         argv = ["12.34.56.7", "u0_a72", "8022", "10"]
@@ -67,6 +67,67 @@ class loadConfigUnit(TestCase):
         self.assertEqual(smsh.config_dict["ssh_params"]["username"], "u0_a72")
         self.assertEqual(smsh.config_dict["ssh_params"]["port"], "8022")
         self.assertEqual(smsh.config_dict["ssh_params"]["timeout"], 10)
+
+class outUnit(TestCase):
+    def setUp(self):
+        pass
+
+    def test_out_no_backup_file(self):
+        if os.path.exists("./SMS_backup.json"):
+            os.remove("./SMS_backup.json")
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+
+        now = datetime.datetime.now()
+        path = os.getcwd() + "/" + "SMS_thread_out_" + now.strftime("%Y-%m-%d_%H-%M") + "/"
+        shutil.rmtree(path, ignore_errors=True, onerror=None)
+
+        with self.assertRaises(SystemExit):
+            smsh.out()
+
+        captured_output.seek(0)
+
+        self.assertEqual(
+            "Successfully created the directory " + path + " \n"
+            + "Backup file not found. Try running smsh.py -b first to create a backup file in this directory.\n",
+            captured_output.read()
+        )
+        sys.stdout = old_std_out
+
+    def test_out_mkdir(self):
+        pass
+        # this test would check to see if dir is made correctly
+
+    def test_out_simple(self):
+        if os.path.exists("./SMS_backup.json"):
+            os.remove("./SMS_backup.json")
+        os.rename("./SMS_backup_small.json", "./SMS_backup.json")
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+
+        with self.assertRaises(SystemExit):
+            smsh.out()
+
+        os.rename("./SMS_backup.json", "./SMS_backup_small.json")
+        captured_output.seek(0)
+
+        now = datetime.datetime.now()
+        path = os.getcwd() + "/" + "SMS_thread_out_" + now.strftime("%Y-%m-%d_%H-%M") + "/"
+        sys.stdout = old_std_out
+
+        self.assertTrue(os.path.exists(path + "1.md"))
+        self.assertTrue(os.stat(path + "1.md").st_size != 0)
+
+        self.assertTrue(os.path.exists(path + "2.md"))
+        self.assertTrue(os.stat(path + "2.md").st_size != 0)
+
+        self.assertTrue(os.path.exists(path + "3.md"))
+        self.assertTrue(os.stat(path + "3.md").st_size != 0)
+
+
+
 
 
 
