@@ -1,0 +1,53 @@
+[
+  {
+    "threadid": 1,
+    "type": "inbox",
+    "read": true,
+    "sender": "Test1",
+    "number": "1234567890",
+    "received": "2019-04-25 14:02",
+    "body": "Hello"
+  },
+  {
+    "threadid": 1,
+    "type": "inbox",
+    "read": true,
+    "number": "9999999999",
+    "received": "2019-04-25 14:02",
+    "body": "World"
+  },
+  {
+    "threadid": 2,
+    "type": "sent",
+    "read": true,
+    "number": "9999999999",
+    "received": "2019-04-25 14:02",
+    "body": "World"
+  },
+  {
+    "threadid": 3,
+    "type": "sent",
+    "read": true,
+    "number": "9999999999",
+    "received": "2019-04-25 14:02",
+    "body": "World"
+  },
+  {
+    "threadid": 2,
+    "type": "inbox",
+    "read": true,
+    "sender": "Test2",
+    "number": "2222222222",
+    "received": "2019-04-25 14:02",
+    "body": "Hello World"
+  },
+  {
+    "threadid": 3,
+    "type": "inbox",
+    "read": true,
+    "sender": "Test3",
+    "number": "2222222222",
+    "received": "2019-04-25 14:02",
+    "body": "Hello World"
+  }
+]

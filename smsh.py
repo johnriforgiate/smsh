@@ -138,7 +138,6 @@ def send(argv):
 
 # Read the last 100 messages to check for any unread messages.
 def read():
-
     # Make the name of the directory to store the message data.
     path = os.getcwd() + "/SMS_last100/"
     # Create the directory to store recent message data.

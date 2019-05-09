@@ -6,8 +6,9 @@ import sys
 import io
 import os
 import datetime
+from unittest.mock import MagicMock
 
-class helpMenuUnit(TestCase):
+class help_menu_unit(TestCase):
     def setUp(self):
         pass
 
@@ -35,7 +36,8 @@ class helpMenuUnit(TestCase):
         )
         sys.stdout = old_std_out
 
-class loadConfigUnit(TestCase):
+
+class load_config_unit(TestCase):
     def setUp(self):
         pass
 
@@ -68,7 +70,8 @@ class loadConfigUnit(TestCase):
         self.assertEqual(smsh.config_dict["ssh_params"]["port"], "8022")
         self.assertEqual(smsh.config_dict["ssh_params"]["timeout"], 10)
 
-class outUnit(TestCase):
+
+class out_unit(TestCase):
     def setUp(self):
         pass
 
@@ -93,6 +96,7 @@ class outUnit(TestCase):
             + "Backup file not found. Try running smsh.py -b first to create a backup file in this directory.\n",
             captured_output.read()
         )
+        shutil.rmtree(path, ignore_errors=True, onerror=None)
         sys.stdout = old_std_out
 
     def test_out_mkdir(self):
@@ -126,9 +130,183 @@ class outUnit(TestCase):
         self.assertTrue(os.path.exists(path + "3.md"))
         self.assertTrue(os.stat(path + "3.md").st_size != 0)
 
+        shutil.rmtree(path, ignore_errors=True, onerror=None)
 
 
+class ssh_command_unit(TestCase):
+    def setUp(self):
+        pass
 
+    def test_failed_connection(self):
+        # Ensure there is a config file, but it is not legitimate
+        old_init = smsh.ssh_init
+        smsh.ssh_init = MagicMock()
+        argv = ["12.34.56.7", "u0_a72", "8022", "10"]
+        with self.assertRaises(SystemExit):
+            smsh.config(argv)
+        smsh.load_config()
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        with self.assertRaises(SystemExit):
+            smsh.ssh_command("ls", "")
+        captured_output.seek(0)
+        self.assertEqual(
+            "A communication error has occurred.\n"
+            + "Check that your .config file has the same IPAddress\n"
+            + "If this is your first time running this tool, make sure your computer connects to your phone via SSH.\n",
+            captured_output.read()
+        )
+        smsh.ssh_init = old_init
+        sys.stdout = old_std_out
+
+
+class send_unit(TestCase):
+    def setUp(self):
+        pass
+
+    def test_send_too_few_args(self):
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        argv = ["1"]
+        with self.assertRaises(SystemExit):
+            smsh.send(argv)
+        captured_output.seek(0)
+        self.assertEqual(
+            "Not enough arguments, try running with phone number, then message. For example:\n"
+            + "smsh.py -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890\n",
+            captured_output.read()
+        )
+        sys.stdout = old_std_out
+    def test_send_too_small_number(self):
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        argv = ["1", "Hello", "World."]
+        with self.assertRaises(SystemExit):
+            smsh.send(argv)
+        captured_output.seek(0)
+        self.assertEqual(
+            "Number is not formatted properly. Try inputting a 10 digit phone number numbers only. For example:\n"
+            "smsh.py -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890\n",
+            captured_output.read()
+        )
+        sys.stdout = old_std_out
+    def test_send_non_integer_number(self):
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        argv = ["abcdefghij", "Hello", "World."]
+        with self.assertRaises(SystemExit) as errMsg:
+            smsh.send(argv)
+        captured_output.seek(0)
+        self.assertEqual(
+            "Number is not formatted properly. Try inputting a 10 digit phone number numbers only. For example:\n"
+            "smsh.py -s 1234567890 Your Message\nSends 'Your Message' to number 1234567890\n",
+            captured_output.read()
+        )
+        self.assertEqual(errMsg.exception.code, 1)
+        sys.stdout = old_std_out
+    def test_send_message_too_long(self):
+        old_std_out = sys.stdout
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        argv = ["1234567890", "Hello", "World",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaa",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaa"]
+        with self.assertRaises(SystemExit) as errMsg:
+            smsh.send(argv)
+        captured_output.seek(0)
+        self.assertEqual(
+            "Message is more than 160 characters. Android can only send single messages up to 160 characters.\n"
+            "Please try sending a shorter message.\n",
+            captured_output.read()
+        )
+        self.assertEqual(errMsg.exception.code, 1)
+        sys.stdout = old_std_out
+
+    def test_send_message_args(self):
+        # Test that message is sending args correctly.
+        old_init = smsh.ssh_init
+        old_command = smsh.ssh_command
+        old_close = smsh.ssh_close
+        smsh.ssh_init = MagicMock()
+        smsh.ssh_command = MagicMock()
+        smsh.ssh_close = MagicMock()
+        argv = ["1234567890", "Hello", "World"]
+        with self.assertRaises(SystemExit) as errMsg:
+            smsh.send(argv)
+        smsh.ssh_command.assert_called_with("termux-sms-send -n 1234567890 Hello World",
+                                            status_string="Sending a text message from your phone...")
+        self.assertEqual(errMsg.exception.code, 0)
+        smsh.ssh_init = old_init
+        smsh.ssh_command = old_command
+        smsh.ssh_close = old_close
+
+
+class read_unit(TestCase):
+    def test_read_happy(self):
+        old_init = smsh.ssh_init
+        old_command = smsh.ssh_command
+        old_close = smsh.ssh_close
+        old_retrieve = smsh.retrieve_file
+        smsh.ssh_init = MagicMock()
+        smsh.ssh_command = MagicMock()
+        smsh.ssh_close = MagicMock()
+        smsh.retrieve_file = MagicMock()
+
+        path = os.getcwd() + "/SMS_last100/"
+        try:
+            os.mkdir(path)
+        except OSError:
+            pass
+        now = datetime.datetime.now()
+        path = path + now.strftime("%Y-%m-%d_%H-%M") + "_last100.json"
+        f = open(path,"w+")
+        f.write('[{"threadid": 1,"type": "inbox","read": false,"sender": '
+                + '"Test1","number": "1234567890","received": "2019-04-25 14:02",'
+                + '"body": "Hello"},'
+                + '{"threadid": 1,"type": "inbox","read": false,'
+                + '"number": "1234567890","received": "2019-04-25 14:02",'
+                + '"body": "Hello"}]')
+        f.close()
+        with self.assertRaises(SystemExit) as errMsg:
+            smsh.read()
+
+        self.assertEqual(errMsg.exception.code, 0)
+        smsh.ssh_command.assert_called_with("rm unread.json", "Removing temporary json file from phone.")
+        smsh.retrieve_file.assert_called_with("/data/data/com.termux/files/home/unread.json", path)
+
+        smsh.ssh_init = old_init
+        smsh.ssh_command = old_command
+        smsh.ssh_close = old_close
+        smsh.retrieve_file = old_retrieve
+
+class backup_unit(TestCase):
+    def test_backup(self):
+        old_init = smsh.ssh_init
+        old_command = smsh.ssh_command
+        old_close = smsh.ssh_close
+        old_retrieve = smsh.retrieve_file
+        smsh.ssh_init = MagicMock()
+        smsh.ssh_command = MagicMock()
+        smsh.ssh_close = MagicMock()
+        smsh.retrieve_file = MagicMock()
+
+        with self.assertRaises(SystemExit) as errMsg:
+            smsh.backup()
+
+        self.assertEqual(errMsg.exception.code, 0)
+        file_string = os.getcwd() + "/SMS_backup.json"
+
+        smsh.retrieve_file.assert_called_with("/data/data/com.termux/files/home/smsLog.json", file_string)
+        smsh.ssh_command.assert_called_with("rm smsLog.json", "Removing temporary json file from phone.")
+
+        smsh.ssh_init = old_init
+        smsh.ssh_command = old_command
+        smsh.ssh_close = old_close
+        smsh.retrieve_file = old_retrieve
 
 
 
